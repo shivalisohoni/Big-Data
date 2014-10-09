@@ -1,0 +1,102 @@
+
+package mrdp.ch3;
+import java.io.IOException;
+import java.util.Map;
+import java.util.TreeMap;
+import mrdp.utils.MRDPUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+        
+public class TopWords{
+        
+ public static class Map extends Mapper<LongWritable, Text, Text, IntWritable> {
+    private final static IntWritable one = new IntWritable(1);
+    private Text word = new Text();
+        
+    public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+        String line = value.toString();
+        StringTokenizer tokenizer = new StringTokenizer(line);
+        while (tokenizer.hasMoreTokens()) {
+            word.set(tokenizer.nextToken());
+	    if(word.toString().length()==7)
+            {		
+            context.write(word, one);}
+        }
+    }
+ } 
+        
+ public static class Reduce extends Reducer<Text, IntWritable, Text, IntWritable> {
+
+    public void reduce(Text key, Iterable<IntWritable> values, Context context) 
+      throws IOException, InterruptedException {
+        int sum = 0;
+        for (IntWritable val : values) {
+            sum += val.get();
+        }
+        context.write(key, new IntWritable(sum));
+    }
+ }
+
+public static class TopMapper extends Mapper<Object,Text,NullWritable,Text>{
+
+private TreeMap<Text,Integer> repToRecordMap=new TreeMap<Text,Integer();
+public void map(Object key,Text value,Context context) throws IOException,InterruptedException
+{
+	Map<String,String> parsed=value.toString();
+	repToRecordMap.put(word.toString(),new Text(value));
+	if(repToRecordMap.size()>1001)
+	{
+		repToRecordMap.remove(repToRecordMap.firstKey());
+	}
+}
+
+	protected void cleanup(Context context) throws IOException, InterruptedException
+	{
+		for(Text t:repToRecoredMap values()){context.write(NullWritable.get(),t);}}
+public static class TopReducer extends Reducer<NullWritable,Text,NullWritable,Text>	
+{
+ private TreeMap<Text,Integer> repToRecordMap=new TreeMap<Text,Integer>();
+public void reduce(NullWritable key, Iterable<Text> values, Context context) throws IOException, InterruptedException{
+for(Text value:values){
+Map<String,String> parsed=value.toString();
+repToRecordMap..put(word.toString(),new Text(value));
+if(repToRecordMap.size()>1001)
+	{
+		repToRecordMap.remove(repToRecordMap.firstKey());
+	}
+for(Text t:repToRecordMap.descendingMap().values()){context.write(NullWritable.get(),t)}}}
+
+
+        
+ public static void main(String[] args) throws Exception {
+    Configuration conf = new Configuration();
+        
+        Job job = new Job(conf, "wordcount");
+    
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(IntWritable.class);
+        
+    job.setMapperClass(Map.class);
+    job.setReducerClass(Reduce.class);
+        
+    job.setInputFormatClass(TextInputFormat.class);
+    job.setOutputFormatClass(TextOutputFormat.class);
+
+    job.setNumReduceTasks(1);
+    job.setJarByClass(TopWords.class);
+        
+    FileInputFormat.addInputPath(job, new Path(args[0]));
+    FileOutputFormat.setOutputPath(job, new Path(args[1]));
+        
+    job.waitForCompletion(true);
+ }
+        
+}
